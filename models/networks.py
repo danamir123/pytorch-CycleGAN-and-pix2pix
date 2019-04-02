@@ -553,7 +553,7 @@ class NLayerDiscriminator(nn.Module):
         padw = 1
         if average:
             sequence = [nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=1, padding=padw), nn.LeakyReLU(0.2, True)]
-            sequence += nn.AvgPool2d(2)
+            sequence += [nn.AvgPool2d(2)]
         else:
             sequence = [nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]
         nf_mult = 1
