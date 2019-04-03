@@ -135,8 +135,8 @@ class CycleGANModel(BaseModel):
         loss_D_fake = self.criterionGAN(pred_fake, False)
         # Combined loss and calculate gradients
         loss_D = (loss_D_real + loss_D_fake) * 0.5
-        setattr(self, 'loss_D_{}_acc'.format(model_name), 0.5 * (pred_real > 0.5).mean() + 0.5 * (pred_fake < 0.5).mean())
-        setattr(self, 'loss_G_{}_acc'.format(model_name), (pred_fake > 0.5).mean())
+        setattr(self, 'loss_D_{}_acc'.format(model_name), 0.5 * (pred_real > 0.5).to(torch.float32).mean() + 0.5 * (pred_fake < 0.5).to(torch.float32).mean())
+        setattr(self, 'loss_G_{}_acc'.format(model_name), (pred_fake > 0.5).to(torch.float32).mean())
         loss_D.backward()
         return loss_D
 
