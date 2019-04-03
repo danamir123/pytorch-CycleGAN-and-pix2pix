@@ -3,6 +3,7 @@ import os
 import sys
 import ntpath
 import time
+import tensorboardX
 from . import util, html
 from subprocess import Popen, PIPE
 from scipy.misc import imresize
@@ -68,6 +69,7 @@ class Visualizer():
         self.opt = opt  # cache the option
         self.display_id = opt.display_id
         self.use_html = opt.isTrain and not opt.no_html
+        self.use_tensorboard = opt.isTrain and opt.use_tensorboard
         self.win_size = opt.display_winsize
         self.name = opt.name
         self.port = opt.display_port
@@ -84,6 +86,12 @@ class Visualizer():
             self.img_dir = os.path.join(self.web_dir, 'images')
             print('create web directory %s...' % self.web_dir)
             util.mkdirs([self.web_dir, self.img_dir])
+
+        if self.use_tensorboard:
+            self.tb_dir = os.path.join(opt.checkpoints_dir, opt.name, 'tb_logs')
+            util.mkdir(self.tb_dir)
+            self.tb_writer = tensorboardX.SummaryWriter(self.tb_dir)
+
         # create a logging file to store training losses
         self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
         with open(self.log_name, "a") as log_file:
@@ -101,7 +109,7 @@ class Visualizer():
         print('Command: %s' % cmd)
         Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
 
-    def display_current_results(self, visuals, epoch, save_result):
+    def display_current_results(self, visuals, epoch, save_result, step):
         """Display current results on visdom; save current results to an HTML file.
 
         Parameters:
@@ -181,6 +189,13 @@ class Visualizer():
                     links.append(img_path)
                 webpage.add_images(ims, txts, links, width=self.win_size)
             webpage.save()
+        if self.use_tensorboard:
+            labels = list(visuals.keys())
+            images = list(visuals.values())
+            images = [util.tensor2im(img) for img in images]
+            images_stacked = np.hstack(images)
+            labels_stacked = "-".join(labels)
+            self.tb_writer.add_image(labels_stacked, images_stacked, global_step=step)
 
     def plot_current_losses(self, epoch, counter_ratio, losses):
         """display the current losses on visdom display: dictionary of error labels and values
@@ -207,20 +222,25 @@ class Visualizer():
         except VisdomExceptionBase:
             self.create_visdom_connections()
 
+
+
     # losses: same format as |losses| of plot_current_losses
-    def print_current_losses(self, epoch, iters, losses, t_comp, t_data):
+    def print_current_losses(self, epoch, epoch_iters, total_iters, losses, t_comp, t_data):
         """print current losses on console; also save the losses to the disk
 
         Parameters:
             epoch (int) -- current epoch
-            iters (int) -- current training iteration during this epoch (reset to 0 at the end of every epoch)
+            epoch_iters (int) -- current training iteration during this epoch (reset to 0 at the end of every epoch)
+            total_iters (int) -- current training iteration
             losses (OrderedDict) -- training losses stored in the format of (name, float) pairs
             t_comp (float) -- computational time per data point (normalized by batch_size)
             t_data (float) -- data loading time per data point (normalized by batch_size)
         """
-        message = '(epoch: %d, iters: %d, time: %.3f, data: %.3f) ' % (epoch, iters, t_comp, t_data)
+        message = '(epoch: %d, iters: %d, time: %.3f, data: %.3f) ' % (epoch, epoch_iters, t_comp, t_data)
         for k, v in losses.items():
             message += '%s: %.3f ' % (k, v)
+            if self.use_tensorboard:
+                self.tb_writer.add_scalar(k, v, total_iters)
 
         print(message)  # print the message
         with open(self.log_name, "a") as log_file:
