@@ -7,6 +7,7 @@ import tensorboardX
 from . import util, html
 from subprocess import Popen, PIPE
 from scipy.misc import imresize
+import torch
 
 if sys.version_info[0] == 2:
     VisdomExceptionBase = Exception
@@ -193,7 +194,8 @@ class Visualizer():
             labels = list(visuals.keys())
             images = list(visuals.values())
             images = [util.tensor2im(img) for img in images]
-            images_stacked = np.hstack(images)
+            images_stacked = np.hstack(images).astype(np.float32) / 255.
+            images_stacked = torch.from_numpy(images_stacked).permute(2, 0, 1)
             labels_stacked = "-".join(labels)
             self.tb_writer.add_image(labels_stacked, images_stacked, global_step=step)
 
