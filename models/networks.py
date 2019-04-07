@@ -345,10 +345,11 @@ class ResnetGenerator(nn.Module):
             mult = 2 ** i
             s = 1 if average else 2
             model += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=s, padding=1, bias=use_bias)]
-            if average:
-                model += [nn.AvgPool2d(2)]
+
             model += [norm_layer(ngf * mult * 2),
                       nn.ReLU(True)]
+            if average:
+                model += [nn.AvgPool2d(2)]
 
         mult = 2 ** n_downsampling
         for i in range(n_blocks):       # add ResNet blocks
@@ -576,9 +577,9 @@ class NLayerDiscriminator(nn.Module):
             if average:
                 sequence += [
                     nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=1, padding=padw, bias=use_bias),
-                    nn.AvgPool2d(2),
                     norm_layer(ndf * nf_mult),
-                    nn.LeakyReLU(0.2, True)
+                    nn.LeakyReLU(0.2, True),
+                    nn.AvgPool2d(2)
                 ]
             else:
                 sequence += [
