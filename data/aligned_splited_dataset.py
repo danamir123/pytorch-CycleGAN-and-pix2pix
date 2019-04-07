@@ -5,7 +5,7 @@ from PIL import Image
 import random
 
 
-class AlignedDatasetSplited(BaseDataset):
+class AlignedSplitedDataset(BaseDataset):
     """
     This dataset class can load unaligned/unpaired datasets.
 
