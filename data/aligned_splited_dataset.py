@@ -1,5 +1,5 @@
 import os.path
-from data.base_dataset import BaseDataset, get_transform
+from data.base_dataset import BaseDataset, get_transform, get_params
 from data.image_folder import make_dataset
 from PIL import Image
 import random
@@ -32,10 +32,10 @@ class AlignedSplitedDataset(BaseDataset):
         self.B_size = len(self.B_paths)  # get the size of dataset B
         assert self.A_size == self.B_size
         btoA = self.opt.direction == 'BtoA'
-        input_nc = self.opt.output_nc if btoA else self.opt.input_nc       # get the number of channels of input image
-        output_nc = self.opt.input_nc if btoA else self.opt.output_nc      # get the number of channels of output image
-        self.transform_A = get_transform(self.opt, grayscale=(input_nc == 1))
-        self.transform_B = get_transform(self.opt, grayscale=(output_nc == 1))
+        self.input_nc = self.opt.output_nc if btoA else self.opt.input_nc       # get the number of channels of input image
+        self.output_nc = self.opt.input_nc if btoA else self.opt.output_nc      # get the number of channels of output image
+
+        
 
     def __getitem__(self, index):
         """Return a data point and its metadata information.
@@ -54,9 +54,14 @@ class AlignedSplitedDataset(BaseDataset):
         B_path = self.B_paths[index % self.B_size]
         A_img = Image.open(A_path).convert('RGB')
         B_img = Image.open(B_path).convert('RGB')
+
+        # apply the same transform to both A and B
+        transform_params = get_params(self.opt, A_img.size)
+        A_transform = get_transform(self.opt, transform_params, grayscale=(self.input_nc == 1))
+        B_transform = get_transform(self.opt, transform_params, grayscale=(self.output_nc == 1))
         # apply image transformation
-        A = self.transform_A(A_img)
-        B = self.transform_B(B_img)
+        A = A_transform(A_img)
+        B = B_transform(B_img)
 
         return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path}
 
